@@ -35,20 +35,23 @@ var colorCodes = {
  * Development logger.
  */
 
-function dev(opts) {
+function dev(opts = {}) {
   return function *logger(next) {
-    // skip logger path in blacklist
-    var path = this.originalUrl.split("?")[0];
-    var blacklist = opts.blacklist;
 
-    if (blacklist.indexOf(path) > -1) {
-      yield next;
+    if (!shouldLogger(this.originalUrl, opts)) {
+      try {
+        yield next;
+      } catch (err) {
+        throw err;
+      }
+      return;
     }
+
     // request
     var start = new Date;
     console.log('  ' + chalk.gray('<--')
-      + ' ' + chalk.bold('%s')
-      + ' ' + chalk.gray('%s'),
+        + ' ' + chalk.bold('%s')
+        + ' ' + chalk.gray('%s'),
         this.method,
         this.originalUrl);
 
@@ -68,8 +71,8 @@ function dev(opts) {
     var counter;
     if (null == length && body && body.readable) {
       this.body = body
-        .pipe(counter = Counter())
-        .on('error', this.onerror);
+          .pipe(counter = Counter())
+          .on('error', this.onerror);
     }
 
     // log when the response is finished or closed,
@@ -87,6 +90,21 @@ function dev(opts) {
       res.removeListener('finish', onfinish);
       res.removeListener('close', onclose);
       log(ctx, start, counter ? counter.length : length, null, event);
+    }
+    // skip logger path in blacklist
+    function shouldLogger(url, opts) {
+      let path = url.split("?")[0];
+      let blacklist = opts.blacklist;
+      if (blacklist instanceof Array) {
+        if (blacklist.indexOf(path) > -1) {
+          return false;
+        }
+      } else if (blacklist instanceof String) {
+        if (blacklist === path) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 }
