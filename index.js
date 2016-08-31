@@ -37,6 +37,13 @@ var colorCodes = {
 
 function dev(opts) {
   return function *logger(next) {
+    // skip logger path in blacklist
+    var path = this.originalUrl.split("?")[0];
+    var blacklist = opts.blacklist;
+
+    if (blacklist.indexOf(path) > -1) {
+      yield next;
+    }
     // request
     var start = new Date;
     console.log('  ' + chalk.gray('<--')
